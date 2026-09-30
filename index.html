@@ -60,6 +60,7 @@ body {
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; border: 0; background: none; }
 :focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+[hidden] { display: none !important; }
 
 .app {
   min-height: 100%;
@@ -252,6 +253,7 @@ kbd { font-family: var(--body); font-weight: 900; background: var(--bg); border:
   position: absolute; inset: 0; display: grid; place-items: center; background: var(--card); z-index: 3; border-radius: 22px;
   text-align: center; padding: 20px;
 }
+.paused-veil[hidden] { display: none !important; }
 .paused-veil b { font-family: var(--display); font-size: 30px; display: block; margin-bottom: 8px; }
 .paused-veil p { color: var(--muted); margin: 0 0 16px; }
 
@@ -844,8 +846,8 @@ function togglePause() {
   turn.paused = !turn.paused;
   if (turn.paused) { turn.remaining = Math.max(0, turn.endAt - Date.now()); }
   else { turn.endAt = Date.now() + turn.remaining; }
-  $("#veil").hidden = !turn.paused;
-  $("#pauseBtn").textContent = turn.paused ? "▶" : "⏸";
+  const v = $("#veil"); if (v) v.hidden = !turn.paused;
+  const pb = $("#pauseBtn"); if (pb) pb.textContent = turn.paused ? "▶" : "⏸";
 }
 
 /* =========================================================

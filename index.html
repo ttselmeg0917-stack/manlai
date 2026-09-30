@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Битгий Хэл!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Nunito:wght@500;700;800;900&display=swap">
+<style>
+/* Layout: one-screen party app — sticky scoreboard strip, one big "card" in the middle, thumb-sized buttons at the bottom */
+:root {
+  --bg: #FFF1C9;          /* butter */
+  --bg-dot: #F5DF9E;
+  --card: #FFFFFF;
+  --ink: #2A1D35;         /* plum ink */
+  --muted: #7B6B86;
+  --line: #EADBB5;
+  --coral: #FF5A5F;       /* forbidden / accent */
+  --coral-soft: #FFE1E1;
+  --mint: #16B57E;        /* correct */
+  --mint-soft: #D8F6E9;
+  --sky: #3D7BFF;         /* team B */
+  --sky-soft: #DDE8FF;
+  --amber: #F2A20C;       /* skip */
+  --amber-soft: #FFEFC7;
+  --grape: #9B5DE5;       /* team 4 */
+  --grape-soft: #EDE0FF;
+  --tc0: var(--coral); --tc1: var(--sky); --tc2: var(--mint); --tc3: var(--amber); --tc4: var(--grape);
+  --ts0: var(--coral-soft); --ts1: var(--sky-soft); --ts2: var(--mint-soft); --ts3: var(--amber-soft); --ts4: var(--grape-soft);
+  --shadow: 0 5px 0 var(--ink);
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B1424; --bg-dot: #2A2036; --card: #2A1F37; --ink: #FFF1DC; --muted: #B6A6C2; --line: #3F3150;
+    --coral: #FF6B70; --coral-soft: #4A2230; --mint: #2BD497; --mint-soft: #173B32; --sky: #6C9BFF; --sky-soft: #1F2B4E;
+    --amber: #FFC044; --amber-soft: #43331A; --grape: #B98CFF; --grape-soft: #33254D; --shadow: 0 5px 0 #0D0912; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1B1424; --bg-dot: #2A2036; --card: #2A1F37; --ink: #FFF1DC; --muted: #B6A6C2; --line: #3F3150;
+  --coral: #FF6B70; --coral-soft: #4A2230; --mint: #2BD497; --mint-soft: #173B32; --sky: #6C9BFF; --sky-soft: #1F2B4E;
+  --amber: #FFC044; --amber-soft: #43331A; --grape: #B98CFF; --grape-soft: #33254D; --shadow: 0 5px 0 #0D0912; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--body);
+  color: var(--ink);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--bg-dot) 1.6px, transparent 1.7px);
+  background-size: 22px 22px;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+
+.app {
+  min-height: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- top bar ---------- */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.logo {
+  font-family: var(--display); font-weight: 900; font-size: 20px; letter-spacing: -.5px;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.logo .bubble {
+  background: var(--coral); color: #fff; padding: 4px 10px 5px; border-radius: 12px 12px 12px 3px;
+  transform: rotate(-4deg); display: inline-block; border: 2px solid var(--ink);
+}
+.icon-btns { display: flex; gap: 8px; }
+.icon-btn {
+  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+  background: var(--card); border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+  font-size: 18px; transition: transform .08s, box-shadow .08s;
+}
+.icon-btn:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.icon-btn[hidden] { display: none !important; }
+
+main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.screen { display: flex; flex-direction: column; gap: 14px; animation: pop .28s ease-out; }
+@keyframes pop { from { opacity: .3; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+
+.panel {
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 26px; box-shadow: var(--shadow);
+  padding: clamp(18px, 4vw, 34px);
+}
+
+/* ---------- setup ---------- */
+.hero { display: grid; grid-template-columns: 1.1fr 1fr; gap: 26px; align-items: center; }
+.hero h1 {
+  font-family: var(--display); font-weight: 900; margin: 0 0 12px;
+  font-size: clamp(34px, 6.2vw, 64px); line-height: .98; letter-spacing: -1.5px; text-wrap: balance;
+}
+.hero h1 .strike { position: relative; color: var(--coral); white-space: nowrap; }
+.hero h1 .strike::after {
+  content: ""; position: absolute; left: -4%; right: -4%; top: 52%; height: .12em;
+  background: var(--ink); border-radius: 9px; transform: rotate(-3deg);
+}
+.hero p { margin: 0 0 6px; color: var(--muted); font-size: 16px; line-height: 1.55; max-width: 44ch; }
+
+.demo-card {
+  background: var(--bg); border: 2.5px solid var(--ink); border-radius: 22px; padding: 18px;
+  transform: rotate(2.5deg); box-shadow: var(--shadow); text-align: center;
+}
+.demo-card .w { font-family: var(--display); font-weight: 900; font-size: 30px; margin: 4px 0 12px; }
+
+.settings { display: grid; gap: 20px; margin-top: 24px; }
+.field-label {
+  font-size: 12px; font-weight: 900; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 9px; display: flex; justify-content: space-between; gap: 8px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 9px 15px; border-radius: 999px; background: var(--bg); border: 2px solid var(--line);
+  font-weight: 800; font-size: 15px; transition: background .12s, border-color .12s;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+
+.time-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.custom-time {
+  display: flex; align-items: center; gap: 4px; background: var(--bg); border: 2px solid var(--line);
+  border-radius: 999px; padding: 3px 5px 3px 14px;
+}
+.custom-time.active { border-color: var(--coral); }
+.custom-time input {
+  width: 64px; border: 0; background: transparent; font-weight: 900; font-size: 16px; outline: none;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.custom-time span { font-weight: 800; color: var(--muted); font-size: 14px; }
+.step { width: 32px; height: 32px; border-radius: 50%; background: var(--card); border: 2px solid var(--line); font-weight: 900; }
+.time-preview { font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--coral); }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.team-input {
+  width: 100%; min-width: 0; padding: 11px 14px; border-radius: 14px; border: 2px solid var(--line);
+  background: var(--bg); font-weight: 800; outline: none;
+}
+.team-input { border-left: 8px solid var(--c, var(--coral)); }
+.teams { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+.toggle-row b { display: block; font-size: 15px; }
+.toggle-row small { color: var(--muted); font-size: 13px; }
+.switch { position: relative; width: 52px; height: 30px; flex: none; border-radius: 99px; background: var(--line); transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--card); transition: transform .15s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.switch[aria-checked="true"] { background: var(--mint); }
+.switch[aria-checked="true"]::after { transform: translateX(22px); }
+
+.big-btn {
+  font-family: var(--display); font-weight: 900; font-size: clamp(17px, 2.4vw, 21px); letter-spacing: -.3px;
+  padding: 18px 26px; border-radius: 18px; border: 2.5px solid var(--ink); box-shadow: var(--shadow);
+  transition: transform .08s, box-shadow .08s; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+}
+.big-btn:active { transform: translateY(5px); box-shadow: 0 0 0 var(--ink); }
+.btn-coral { background: var(--coral); color: #fff; }
+.btn-plain { background: var(--card); }
+.start-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 6px; }
+.keys { color: var(--muted); font-size: 13px; }
+kbd { font-family: var(--body); font-weight: 900; background: var(--bg); border: 1.5px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+
+/* ---------- game ---------- */
+.hud { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.turn-pill {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px; border-radius: 999px;
+  background: var(--card); border: 2px solid var(--ink); font-weight: 900; white-space: nowrap; max-width: 46vw; overflow: hidden;
+}
+.turn-pill .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--c, var(--coral)); border: 2px solid var(--ink); flex: none; }
+.turn-pill span { overflow: hidden; text-overflow: ellipsis; }
+.clock { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.bar { flex: 1; height: 16px; border-radius: 99px; background: var(--card); border: 2px solid var(--ink); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--mint); border-radius: 99px; transition: width .2s linear, background .3s; }
+.bar.warn i { background: var(--amber); }
+.bar.danger i { background: var(--coral); }
+.time-num {
+  font-family: var(--display); font-weight: 900; font-size: 26px; min-width: 3.4ch; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.time-num.danger { color: var(--coral); animation: throb 1s infinite; }
+@keyframes throb { 50% { transform: scale(1.12); } }
+.tally { display: flex; gap: 6px; }
+.tally div {
+  min-width: 48px; text-align: center; padding: 5px 8px; border-radius: 12px; border: 2px solid var(--ink);
+  font-family: var(--display); font-weight: 900; font-size: 17px; font-variant-numeric: tabular-nums;
+}
+.tally .t-ok { background: var(--mint-soft); }
+.tally .t-skip { background: var(--amber-soft); }
+.tally .t-bad { background: var(--coral-soft); }
+
+.word-card { position: relative; text-align: center; overflow: hidden; }
+.word-card .corner { position: absolute; top: 14px; right: 18px; font-size: 12px; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+.word-card .cat { position: absolute; top: 14px; left: 18px; font-size: 12px; font-weight: 900; letter-spacing: 1.4px; color: var(--muted); text-transform: uppercase; }
+.eyebrow { font-size: 12px; font-weight: 900; letter-spacing: 2.4px; color: var(--muted); text-transform: uppercase; margin-top: 12px; }
+.main-word {
+  font-family: var(--display); font-weight: 900; letter-spacing: -1.5px; line-height: 1.02;
+  font-size: clamp(40px, 8.5vw, 84px); margin: 10px 0 22px; overflow-wrap: anywhere;
+}
+.taboo-head {
+  display: inline-flex; align-items: center; gap: 8px; font-weight: 900; font-size: 13px; letter-spacing: 1.6px;
+  color: var(--coral); text-transform: uppercase; margin-bottom: 14px;
+}
+.taboo-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 680px; margin: 0 auto; }
+.taboo {
+  padding: 10px 18px; border-radius: 14px; font-weight: 900; font-size: clamp(15px, 2vw, 20px);
+  background: var(--coral-soft); border: 2px dashed var(--coral); color: var(--ink);
+}
+.taboo:nth-child(odd) { transform: rotate(-1.5deg); }
+.taboo:nth-child(even) { transform: rotate(1.5deg); }
+
+.stamp {
+  position: absolute; left: 50%; top: 42%; pointer-events: none;
+  font-family: var(--display); font-weight: 900; font-size: clamp(28px, 6vw, 52px); letter-spacing: 1px;
+  padding: 8px 22px; border: 5px solid currentColor; border-radius: 14px; opacity: 0;
+  transform: translate(-50%, -50%) rotate(-12deg) scale(1.6);
+}
+.stamp.show { animation: stamp .55s ease-out forwards; }
+@keyframes stamp {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(1.6); }
+  25% { opacity: .95; transform: translate(-50%, -50%) rotate(-12deg) scale(1); }
+  80% { opacity: .95; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(1); }
+}
+.card-in { animation: cardIn .22s ease-out; }
+@keyframes cardIn { from { opacity: 0; transform: translateX(26px) rotate(1.5deg); } to { opacity: 1; transform: none; } }
+.shake { animation: shake .35s; }
+@keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+
+.controls { display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 10px; }
+.controls .big-btn { min-height: 70px; padding: 12px; flex-direction: column; gap: 2px; }
+.controls .big-btn small { font-family: var(--body); font-weight: 800; font-size: 12px; opacity: .8; letter-spacing: 0; }
+.btn-skip { background: var(--amber-soft); }
+.btn-bad { background: var(--coral-soft); }
+.btn-ok { background: var(--mint); color: #fff; }
+.btn-bad[hidden] { display: none !important; }
+.controls.no-pen { grid-template-columns: 1fr 1.6fr; }
+
+.paused-veil {
+  position: absolute; inset: 0; display: grid; place-items: center; background: var(--card); z-index: 3; border-radius: 22px;
+  text-align: center; padding: 20px;
+}
+.paused-veil b { font-family: var(--display); font-size: 30px; display: block; margin-bottom: 8px; }
+.paused-veil p { color: var(--muted); margin: 0 0 16px; }
+
+/* ---------- ready / summary ---------- */
+.center { text-align: center; }
+.ready-team { font-family: var(--display); font-weight: 900; font-size: clamp(34px, 7vw, 64px); letter-spacing: -1px; margin: 8px 0; overflow-wrap: anywhere; }
+.ready-team { color: var(--c, var(--coral)); }
+.sub { color: var(--muted); font-size: 16px; margin: 0 0 20px; line-height: 1.5; }
+.countdown { font-family: var(--display); font-weight: 900; font-size: 140px; line-height: 1; color: var(--coral); animation: pop .4s; }
+
+.score-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 18px 0; }
+.score-board.solo { grid-template-columns: repeat(3, 1fr); }
+.sb {
+  border: 2.5px solid var(--ink); border-radius: 18px; padding: 14px; text-align: center; min-width: 0;
+}
+.sb.team { background: var(--s); position: relative; }
+.sb.team .n { color: var(--ink); }
+.sb.team::before { content: ""; position: absolute; top: 10px; left: 10px; width: 12px; height: 12px; border-radius: 50%; background: var(--c); border: 2px solid var(--ink); }
+.sb.now { transform: translateY(-4px); box-shadow: var(--shadow); }
+.sb.ok { background: var(--mint-soft); }
+.sb.skip { background: var(--amber-soft); }
+.sb.bad { background: var(--coral-soft); }
+.sb .n { font-family: var(--display); font-weight: 900; font-size: 42px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.sb .l { font-weight: 800; color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb.lead { outline: 4px solid var(--amber); outline-offset: 3px; }
+
+.review { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 6px 0 22px; max-height: 190px; overflow-y: auto; padding: 4px; }
+.rv { padding: 6px 12px; border-radius: 10px; font-weight: 800; font-size: 14px; border: 2px solid transparent; }
+.rv.ok { background: var(--mint-soft); border-color: var(--mint); }
+.rv.skip { background: var(--amber-soft); border-color: var(--amber); }
+.rv.bad { background: var(--coral-soft); border-color: var(--coral); text-decoration: line-through; }
+.btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.trophy { font-size: 64px; line-height: 1; }
+
+/* ---------- toast / float ---------- */
+.float {
+  position: fixed; pointer-events: none; font-family: var(--display); font-weight: 900; font-size: 34px; z-index: 50;
+  animation: floatUp .7s ease-out forwards;
+}
+@keyframes floatUp { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -70px); } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; }
+  .demo-card { display: none; }
+  .two, .teams { grid-template-columns: 1fr; }
+  .hud { grid-template-columns: 1fr auto; }
+  .clock { grid-column: 1 / -1; grid-row: 2; }
+  .controls, .controls.no-pen { grid-template-columns: 1fr 1fr; }
+  .controls .btn-ok { grid-column: 1 / -1; min-height: 76px; }
+  .logo { font-size: 17px; }
+  .score-board.solo .sb .n { font-size: 32px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .app { padding-block: 8px; gap: 8px; }
+  .main-word { font-size: clamp(32px, 7vw, 54px); margin: 4px 0 10px; }
+  .eyebrow { margin-top: 0; }
+  .panel { padding: 14px 20px; }
+  .taboo { padding: 6px 12px; font-size: 14px; }
+  .controls .big-btn { min-height: 52px; }
+  .controls, .controls.no-pen { grid-template-columns: 1fr 1fr 1.6fr; }
+  .controls.no-pen { grid-template-columns: 1fr 1.6fr; }
+  .controls .btn-ok { grid-column: auto; min-height: 52px; }
+  .hud { grid-template-columns: auto 1fr auto; }
+  .clock { grid-column: auto; grid-row: auto; }
+  .countdown { font-size: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="logo"><span class="bubble">БИТГИЙ</span> ХЭЛ!</div>
+    <div class="icon-btns">
+      <button class="icon-btn" id="pauseBtn" title="Түр зогсоох (P)" aria-label="Түр зогсоох" hidden>⏸</button>
+      <button class="icon-btn" id="soundBtn" title="Дуу" aria-label="Дуу асаах/унтраах">🔊</button>
+      <button class="icon-btn" id="fullBtn" title="Бүтэн дэлгэц" aria-label="Бүтэн дэлгэц">⛶</button>
+    </div>
+  </header>
+
+  <main id="main"></main>
+</div>
+
+<script>
+/* =========================================================
+   ҮГСИЙН САН — [гол үг, [5 хориотой үг], ангилал]
+========================================================= */
+const RAW = {
+ "Бие махбод": [
+  ["Шарталт",["архи","толгой","уух","өвдөх","өглөө"]],
+  ["Хурхиралт",["унтах","хамар","шөнө","дуу","ор"]],
+  ["Унгалт",["хий","үнэр","бөгс","өмхий","чимээ"]],
+  ["Жорлон",["баах","шээх","суултуур","цаас","угаалгын"]],
+  ["Суулгалт",["гэдэс","жорлон","баах","гүйх","өвдөх"]],
+  ["Өтгөн",["баах","бор","жорлон","гэдэс","хатах"]],
+  ["Суга",["хөлс","үнэр","үс","гар","дезодорант"]],
+  ["Батга",["нүүр","арьс","шахах","идээ","өсвөр"]],
+  ["Халзан",["үс","толгой","унах","гялгар","дух"]],
+  ["Хаг",["үс","толгой","цагаан","шампунь","загатнах"]],
+  ["Бөөс",["үс","толгой","загатнах","шавж","сам"]],
+  ["Нус",["хамар","ногоон","арчих","нийх","ханиад"]],
+  ["Шүлс",["ам","нулимах","нойтон","хэл","ус"]],
+  ["Зогьсолт",["ус","амьсгал","гэнэт","дуу","айлгах"]],
+  ["Найтаалт",["хамар","ханиад","тоос","салфетка","дуу"]],
+  ["Ханиалга",["хоолой","өвдөх","ханиад","дуу","эм"]],
+  ["Хөлс",["халуун","суга","үнэр","нойтон","дасгал"]],
+  ["Шивэр",["хөл","үнэр","оймс","гутал","өмхий"]],
+  ["Хацар",["нүүр","улаан","үнсэх","хоёр","ам"]],
+  ["Хүйс",["гэдэс","цоорхой","төрөх","бие","дээр"]]
+ ],
+ "Хайр дурлал": [
+  ["Дурлал",["хайр","зүрх","хос","таалагдах","болзоо"]],
+  ["Хардалт",["хос","сэрдэх","утас","шалгах","хайр"]],
+  ["Салалт",["хос","хайр","уйлах","дуусах","экс"]],
+  ["Болзоо",["уулзах","хос","ресторан","дурлах","анхны"]],
+  ["Хурим",["гэрлэх","бөгж","даашинз","хос","бэр"]],
+  ["Үнсэлт",["уруул","ам","хайр","хос","үнсэх"]],
+  ["Тэврэлт",["гар","хайр","хүн","бие","тэврэх"]],
+  ["Бөгж",["хуруу","гэрлэх","алт","сүйн","зүүх"]],
+  ["Хадам",["гэрлэх","ээж","аав","нөхөр","эхнэр"]],
+  ["Ганцбие",["хос","найз","гэрлэх","болзоо","ганцаараа"]],
+  ["Экс",["хуучин","салсан","хайр","үерхэх","найз"]],
+  ["Краш",["дурлах","таалагдах","нууц","хайр","хүн"]],
+  ["Тиндер",["болзоо","swipe","match","app","танилцах"]]
+ ],
+ "Интернэт": [
+  ["Селфи",["зураг","камер","утас","нүүр","өөрөө"]],
+  ["Мийм",["зураг","онигоо","интернэт","хөгжилтэй","share"]],
+  ["Филтер",["зураг","Instagram","эффект","нүүр","гоё"]],
+  ["Лайк",["Facebook","зүрх","дарах","пост","сошиал"]],
+  ["Стори",["Instagram","зураг","бичлэг","сошиал","өдөр"]],
+  ["Пост",["Facebook","зураг","нийтлэх","сошиал","бичих"]],
+  ["Чат",["мессеж","бичих","Messenger","ярих","утас"]],
+  ["Вайфай",["интернэт","нууц","сүлжээ","router","холбогдох"]],
+  ["Код",["нууц","password","аккаунт","орох","мартсан"]],
+  ["Цэнэглэгч",["утас","батарей","тог","залгах","кабель"]],
+  ["Батарей",["цэнэг","утас","дуусах","хувь","цахилгаан"]],
+  ["Сэрүүлэг",["өглөө","цаг","унтах","босох","дуугарах"]],
+  ["Утас",["залгах","мессеж","дэлгэц","iPhone","дугаар"]],
+  ["Камер",["зураг","бичлэг","авах","линз","утас"]],
+  ["Интернэт",["WiFi","сүлжээ","Google","онлайн","холбогдох"]],
+  ["Тикток",["бичлэг","бүжиг","сошиал","scroll","viral"]],
+  ["Фэйсбүүк",["сошиал","найз","пост","лайк","Meta"]]
+ ],
+ "Ажил, амьдрал": [
+  ["Цалин",["мөнгө","ажил","данс","сар","авах"]],
+  ["Өр",["мөнгө","зээл","төлөх","авах","өгөх"]],
+  ["Зээл",["банк","мөнгө","хүү","төлөх","авах"]],
+  ["Дарга",["ажил","оффис","захирал","цалин","тушаал"]],
+  ["Хурал",["ажил","суух","ярих","дарга","оффис"]],
+  ["Ажил",["цалин","оффис","дарга","хийх","амралт"]],
+  ["Хоцролт",["цаг","оройтох","ажил","сургууль","гүйх"]],
+  ["Амралт",["ажил","унтах","аялах","өдөр","чөлөө"]],
+  ["Оюутан",["сургууль","их","хичээл","багш","шалгалт"]],
+  ["Шалгалт",["дүн","багш","асуулт","хичээл","сургууль"]]
+ ],
+ "Хот, зам": [
+  ["Түгжрэл",["машин","зам","Улаанбаатар","зогсох","хөдөлгөөн"]],
+  ["Автобус",["буудал","жолооч","зорчигч","карт","нийтийн"]],
+  ["Такси",["машин","жолооч","мөнгө","хүргэх","дуудах"]],
+  ["Машин",["жолооч","дугуй","зам","бензин","унаа"]],
+  ["Бензин",["шатахуун","машин","колонк","литр","сав"]],
+  ["Дугуй",["машин","резин","хий","хагарах","эргэх"]],
+  ["Торгууль",["цагдаа","дүрэм","мөнгө","төлөх","зөрчил"]],
+  ["Цагдаа",["дүрэм","торгууль","барих","хууль","дүрэмт"]],
+  ["Дохио",["улаан","ногоон","зам","машин","гэрэл"]],
+  ["Зогсоол",["машин","тавих","газар","төлбөр","parking"]]
+ ],
+ "Хоол ундаа": [
+  ["Бууз",["мах","гурил","жигнэх","цагаансар","банш"]],
+  ["Хуушуур",["мах","гурил","тос","шарах","наадам"]],
+  ["Цуйван",["гурил","мах","ногоо","хуурах","хоол"]],
+  ["Бантан",["гурил","шөл","хүүхэд","хутгах","хоол"]],
+  ["Гоймон",["урт","хоол","чанах","доширак","гурил"]],
+  ["Будаа",["цагаан","агшаах","хоол","аяга","идэх"]],
+  ["Тараг",["сүү","цагаан","исгэлэн","аяга","уух"]],
+  ["Айраг",["гүү","исгэх","цагаан","наадам","уух"]],
+  ["Архи",["согтуу","уух","шил","шарталт","градус"]],
+  ["Пиво",["шар","уух","хөөс","лааз","архи"]]
+ ],
+ "Соёл, наадам": [
+  ["Караоке",["дуу","микрофон","дуулах","тайз","найз"]],
+  ["Бүжиг",["хөгжим","хөдөлгөөн","хөл","клуб","бүжиглэх"]],
+  ["Дуу",["дуулах","хөгжим","үг","ая","сонсох"]],
+  ["Микрофон",["дуулах","караоке","гар","дуу","ярих"]],
+  ["Гитар",["утас","хөгжим","тоглох","ая","гар"]],
+  ["Төгөлдөр",["хуур","даруул","хөгжим","тоглох","хар"]],
+  ["Наадам",["бөх","морь","сур","хуушуур","долдугаар"]],
+  ["Бөх",["барилдах","наадам","даваа","аварга","зодог"]],
+  ["Морь",["адуу","унах","эмээл","давхих","наадам"]],
+  ["Дээл",["Монгол","өмсөх","торго","цагаансар","бүс"]]
+ ],
+ "Гэр бүл": [
+  ["Ээж",["төрөх","гэр","аав","хүүхэд","эмэгтэй"]],
+  ["Аав",["эрэгтэй","ээж","хүүхэд","гэр","эцэг"]],
+  ["Эмээ",["өвөө","настай","ээж","ач","гэр"]],
+  ["Өвөө",["эмээ","настай","аав","ач","гэр"]],
+  ["Хамаатан",["гэрбүл","цагаансар","ах","эгч","төрөл"]],
+  ["Зочин",["гэр","ирэх","хаалга","цай","угтах"]],
+  ["Хөрш",["айл","хажуу","гэр","ойр","хаалга"]],
+  ["Найз",["нөхөрлөх","хамт","хүн","дотно","уулзах"]],
+  ["Хүүхэд",["бага","ээж","аав","төрөх","тоглох"]],
+  ["Нялх",["хүүхэд","живх","уйлах","сүү","төрөх"]]
+ ]
+};
+const CATS = Object.keys(RAW);
+
+/* =========================================================
+   ТОХИРГОО (хадгалагдана)
+========================================================= */
+const PRESETS = [30, 45, 60, 90, 120, 180];
+const DEFAULT_TEAMS = ["Улаан баг", "Цэнхэр баг", "Ногоон баг", "Шар баг", "Ягаан баг"];
+const settings = Object.assign({
+  time: 60, mode: "teams", teamCount: 2, teams: DEFAULT_TEAMS.slice(),
+  rounds: 3, penalty: true, sound: true, cats: CATS.slice()
+}, load());
+settings.cats = settings.cats.filter(c => CATS.includes(c));
+if (!settings.cats.length) settings.cats = CATS.slice();
+if (!Array.isArray(settings.teams)) settings.teams = DEFAULT_TEAMS.slice();
+if (settings.teamA) { settings.teams[0] = settings.teamA; delete settings.teamA; }
+if (settings.teamB) { settings.teams[1] = settings.teamB; delete settings.teamB; }
+DEFAULT_TEAMS.forEach((n, i) => { if (!settings.teams[i]) settings.teams[i] = n; });
+settings.teamCount = Math.min(5, Math.max(1, Number(settings.teamCount) || 2));
+const tv = i => `--c:var(--tc${i});--s:var(--ts${i})`;
+const nTeams = () => settings.mode === "teams" ? settings.teamCount : 1;
+
+function load() { try { return JSON.parse(localStorage.getItem("bh-settings") || "{}"); } catch (e) { return {}; } }
+function save() { try { localStorage.setItem("bh-settings", JSON.stringify(settings)); } catch (e) {} }
+
+/* =========================================================
+   ТОГЛООМЫН ТӨЛӨВ
+========================================================= */
+let game = null;      // { deck, pos, scores:[a,b], turn, totalTurns, history:[] }
+let turn = null;      // { ok, skip, bad, log:[], endAt, remaining, paused, timer }
+const $ = s => document.querySelector(s);
+const main = $("#main");
+
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function buildDeck() {
+  const cards = [];
+  settings.cats.forEach(c => RAW[c].forEach(([w, t]) => cards.push({ w, t, c })));
+  return shuffle(cards);
+}
+function fmt(sec) { sec = Math.max(0, Math.ceil(sec)); const m = Math.floor(sec / 60), s = sec % 60; return m ? m + ":" + String(s).padStart(2, "0") : String(s); }
+function fmtLong(sec) { const m = Math.floor(sec / 60), s = sec % 60; return (m ? m + " мин " : "") + (s ? s + " сек" : (m ? "" : "0 сек")); }
+function esc(s) { return String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch])); }
+function teamName(i) { return settings.teams[i] || DEFAULT_TEAMS[i]; }
+function curTeam() { return settings.mode === "teams" ? game.turn % settings.teamCount : 0; }
+
+/* =========================================================
+   ДУУ (WebAudio)
+========================================================= */
+let ac = null;
+function beep(freq, dur = .12, type = "sine", vol = .18, delay = 0) {
+  if (!settings.sound) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
+  } catch (e) {}
+}
+const sfx = {
+  ok() { beep(660, .1, "triangle"); beep(990, .16, "triangle", .18, .08); },
+  skip() { beep(360, .12, "sine", .14); },
+  bad() { beep(160, .35, "sawtooth", .16); },
+  tick() { beep(1200, .05, "square", .06); },
+  go() { beep(520, .12, "triangle"); beep(780, .12, "triangle", .18, .1); beep(1040, .2, "triangle", .18, .2); },
+  end() { beep(880, .25, "square", .12); beep(660, .25, "square", .12, .25); beep(440, .5, "square", .12, .5); }
+};
+
+/* =========================================================
+   1. ТОХИРГООНЫ ДЭЛГЭЦ
+========================================================= */
+function renderSetup() {
+  stopTimer(); game = null; turn = null; $("#pauseBtn").hidden = true;
+  const isPreset = PRESETS.includes(settings.time);
+  main.innerHTML = `
+  <section class="screen">
+    <div class="panel">
+      <div class="hero">
+        <div>
+          <h1>Тайлбарла.<br>Гэхдээ <span class="strike">битгий хэл!</span></h1>
+          <p>Том үгийг багийнхандаа тайлбарла. Доорх 5 хориотой үгийг хэлбэл торгууль. Цаг дуусахаас өмнө аль болох олныг таалга.</p>
+        </div>
+        <div class="demo-card" aria-hidden="true">
+          <div class="eyebrow">Жишээ карт</div>
+          <div class="w">Бууз</div>
+          <div class="taboo-list">${["мах","гурил","жигнэх","цагаансар","банш"].map(x => `<span class="taboo" style="font-size:14px;padding:6px 11px">${x}</span>`).join("")}</div>
+        </div>
+      </div>
+
+      <div class="settings">
+        <div>
+          <div class="field-label"><span>⏱ Нэг ээлжийн хугацаа</span><span class="time-preview" id="timePreview">${fmtLong(settings.time)}</span></div>
+          <div class="time-row">
+            <div class="chips" id="presetChips">
+              ${PRESETS.map(p => `<button class="chip" data-t="${p}" aria-pressed="${settings.time === p}">${p < 60 ? p + "с" : (p / 60) + "м"}</button>`).join("")}
+            </div>
+            <label class="custom-time ${isPreset ? "" : "active"}" id="customWrap" for="customTime">
+              <span>Өөрөө:</span>
+              <button class="step" type="button" data-step="-5" aria-label="5 секунд хасах">−</button>
+              <input id="customTime" type="number" inputmode="numeric" min="5" max="900" step="5" value="${settings.time}" aria-label="Секунд">
+              <button class="step" type="button" data-step="5" aria-label="5 секунд нэмэх">+</button>
+              <span>сек</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="two">
+          <div>
+            <div class="field-label"><span>👥 Тоглох горим</span></div>
+            <div class="chips" id="modeChips">
+              ${[1,2,3,4,5].map(n => `<button class="chip" data-m="teams" data-n="${n}" aria-pressed="${settings.mode === "teams" && settings.teamCount === n}">${n} баг</button>`).join("")}
+              <button class="chip" data-m="solo" aria-pressed="${settings.mode === "solo"}">Оноогүй</button>
+            </div>
+          </div>
+          <div id="roundsWrap" ${settings.mode === "teams" ? "" : "hidden"}>
+            <div class="field-label"><span>🔁 Баг бүр хэдэн ээлж тоглох</span></div>
+            <div class="chips" id="roundChips">
+              ${[1,2,3,4,5,8].map(r => `<button class="chip" data-r="${r}" aria-pressed="${settings.rounds === r}">${r}</button>`).join("")}
+            </div>
+          </div>
+        </div>
+
+        <div id="teamsWrap" ${settings.mode === "teams" ? "" : "hidden"}>
+          <div class="field-label"><span>🏷 Багийн нэр</span></div>
+          <div class="teams" id="teamInputs"></div>
+        </div>
+
+        <div>
+          <div class="field-label"><span>🗂 Сэдэв</span><span id="catCount"></span></div>
+          <div class="chips" id="catChips">
+            ${CATS.map(c => `<button class="chip" data-c="${c}" aria-pressed="${settings.cats.includes(c)}">${c}</button>`).join("")}
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <div><b>Хориотой үг хэлбэл −1 оноо</b><small>Шүүгч «Хэлчихлээ» товч дарна</small></div>
+          <button class="switch" id="penSwitch" role="switch" aria-checked="${settings.penalty}" aria-label="Торгууль"></button>
+        </div>
+
+        <div class="start-row">
+          <div class="keys"><kbd>Space</kbd>/<kbd>→</kbd> зөв · <kbd>←</kbd> алгасах · <kbd>↓</kbd> хэлчихлээ · <kbd>P</kbd> пауз</div>
+          <button class="big-btn btn-coral" id="startBtn">Эхлэх 🔥</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+
+  const setTime = v => {
+    v = Math.round(Number(v)); if (!isFinite(v)) return;
+    v = Math.min(900, Math.max(5, v));
+    settings.time = v; save();
+    $("#timePreview").textContent = fmtLong(v);
+    main.querySelectorAll("#presetChips .chip").forEach(b => b.setAttribute("aria-pressed", Number(b.dataset.t) === v));
+    $("#customWrap").classList.toggle("active", !PRESETS.includes(v));
+  };
+  $("#presetChips").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; setTime(b.dataset.t); $("#customTime").value = settings.time; };
+  $("#customTime").oninput = e => { if (e.target.value !== "") setTime(e.target.value); };
+  $("#customTime").onblur = e => { e.target.value = settings.time; };
+  main.querySelectorAll(".step").forEach(b => b.onclick = e => { e.preventDefault(); setTime(settings.time + Number(b.dataset.step)); $("#customTime").value = settings.time; });
+
+  const paintTeams = () => {
+    $("#teamInputs").innerHTML = Array.from({ length: settings.teamCount }, (_, i) =>
+      `<input class="team-input" style="${tv(i)}" id="team${i}" data-i="${i}" maxlength="20" value="${esc(teamName(i))}" aria-label="${i + 1}-р багийн нэр">`).join("");
+  };
+  paintTeams();
+  $("#teamInputs").oninput = e => {
+    const i = Number(e.target.dataset.i);
+    settings.teams[i] = e.target.value.trim() || DEFAULT_TEAMS[i]; save();
+  };
+  $("#modeChips").onclick = e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    settings.mode = b.dataset.m;
+    if (b.dataset.n) settings.teamCount = Number(b.dataset.n);
+    save();
+    main.querySelectorAll("#modeChips .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
+    $("#teamsWrap").hidden = $("#roundsWrap").hidden = settings.mode !== "teams";
+    paintTeams();
+  };
+  $("#roundChips").onclick = e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    settings.rounds = Number(b.dataset.r); save();
+    main.querySelectorAll("#roundChips .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
+  };
+
+  const updCats = () => {
+    const n = settings.cats.reduce((s, c) => s + RAW[c].length, 0);
+    $("#catCount").textContent = n + " карт";
+  };
+  $("#catChips").onclick = e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    const c = b.dataset.c, on = settings.cats.includes(c);
+    if (on && settings.cats.length === 1) { b.classList.add("shake"); setTimeout(() => b.classList.remove("shake"), 400); return; }
+    settings.cats = on ? settings.cats.filter(x => x !== c) : settings.cats.concat(c); save();
+    b.setAttribute("aria-pressed", !on); updCats();
+  };
+  updCats();
+
+  $("#penSwitch").onclick = e => { settings.penalty = !settings.penalty; save(); e.currentTarget.setAttribute("aria-checked", settings.penalty); };
+  $("#startBtn").onclick = newGame;
+}
+
+/* =========================================================
+   2. ШИНЭ ТОГЛООМ / ЭЭЛЖ БЭЛТГЭХ
+========================================================= */
+function newGame() {
+  game = { deck: buildDeck(), pos: 0, scores: new Array(nTeams()).fill(0), turnPts: [], turn: 0, totalTurns: settings.mode === "teams" ? settings.rounds * settings.teamCount : Infinity };
+  renderReady();
+}
+
+function renderReady() {
+  stopTimer(); $("#pauseBtn").hidden = true;
+  const teams = settings.mode === "teams", t = curTeam();
+  const round = Math.floor(game.turn / settings.teamCount) + 1;
+  main.innerHTML = `
+  <section class="screen">
+    <div class="panel center">
+      ${teams ? `<div class="eyebrow">${round}-р тойрог / ${settings.rounds}</div>
+        <div class="ready-team" style="${tv(t)}">${esc(teamName(t))}</div>
+        <p class="sub">Утсаа тайлбарлагчид өг. Бусад нь дэлгэц рүү битгий хар!</p>
+        ${scoreBoardHTML(false, t)}`
+      : `<div class="eyebrow">Бэлэн үү?</div>
+        <div class="ready-team a">${fmtLong(settings.time)}</div>
+        <p class="sub">Утсаа тайлбарлагчид өг. Бусад нь дэлгэц рүү битгий хар!</p>`}
+      <div class="btn-row">
+        <button class="big-btn btn-plain" id="backBtn">← Тохиргоо</button>
+        <button class="big-btn btn-coral" id="goBtn">Бэлэн! 3-2-1</button>
+      </div>
+    </div>
+  </section>`;
+  $("#backBtn").onclick = renderSetup;
+  $("#goBtn").onclick = countdown;
+}
+
+function leaders() {
+  const max = Math.max(...game.scores);
+  const idx = game.scores.map((s, i) => s === max ? i : -1).filter(i => i >= 0);
+  return idx.length === game.scores.length ? [] : idx;
+}
+function scoreBoardHTML(lead, now) {
+  const L = lead ? leaders() : [];
+  return `<div class="score-board">${game.scores.map((s, i) =>
+    `<div class="sb team ${L.includes(i) ? "lead" : ""} ${now === i ? "now" : ""}" style="${tv(i)}"><div class="n">${s}</div><div class="l">${esc(teamName(i))}</div></div>`).join("")}
+  </div>`;
+}
+
+function countdown() {
+  let n = 3;
+  requestWake();
+  const show = () => {
+    main.innerHTML = `<section class="screen center"><div class="countdown">${n}</div></section>`;
+    beep(n ? 600 : 900, .1, "triangle");
+  };
+  show();
+  const iv = setInterval(() => {
+    n--;
+    if (n <= 0) { clearInterval(iv); sfx.go(); startTurn(); } else show();
+  }, 700);
+}
+
+/* =========================================================
+   3. ТОГЛОЛТ
+========================================================= */
+function startTurn() {
+  turn = { ok: 0, skip: 0, bad: 0, log: [], remaining: settings.time * 1000, endAt: Date.now() + settings.time * 1000, paused: false, lastTick: null };
+  const t = curTeam(), teams = settings.mode === "teams";
+  main.innerHTML = `
+  <section class="screen" id="gameScreen">
+    <div class="hud">
+      <div class="turn-pill" style="${tv(t)}"><span class="dot"></span><span>${teams ? esc(teamName(t)) : "Тоглолт"}</span></div>
+      <div class="clock">
+        <div class="bar" id="bar"><i id="barFill"></i></div>
+        <div class="time-num" id="timeNum">${fmt(settings.time)}</div>
+      </div>
+      <div class="tally">
+        <div class="t-ok" title="Зөв">${"<span id='cOk'>0</span>"}</div>
+        <div class="t-skip" title="Алгассан"><span id="cSkip">0</span></div>
+        ${settings.penalty ? `<div class="t-bad" title="Хориотой үг хэлсэн"><span id="cBad">0</span></div>` : ""}
+      </div>
+    </div>
+
+    <div class="panel word-card" id="wordCard">
+      <div class="cat" id="cat"></div>
+      <div class="corner" id="corner"></div>
+      <div id="cardBody">
+        <div class="eyebrow">Тайлбарлах үг</div>
+        <div class="main-word" id="word"></div>
+        <div class="taboo-head">🚫 Эдгээрийг битгий хэл</div>
+        <div class="taboo-list" id="taboos"></div>
+      </div>
+      <div class="stamp" id="stamp"></div>
+      <div class="paused-veil" id="veil" hidden>
+        <div><b>Түр зогслоо</b><p>Карт нуугдсан. Цаг зогссон.</p>
+        <div class="btn-row"><button class="big-btn btn-plain" id="quitBtn">Ээлж дуусгах</button><button class="big-btn btn-coral" id="resumeBtn">Үргэлжлүүлэх ▶</button></div></div>
+      </div>
+    </div>
+
+    <div class="controls ${settings.penalty ? "" : "no-pen"}">
+      <button class="big-btn btn-skip" id="skipBtn">⏭ Алгасах<small>←</small></button>
+      <button class="big-btn btn-bad" id="badBtn" ${settings.penalty ? "" : "hidden"}>🚫 Хэлчихлээ<small>−1 · ↓</small></button>
+      <button class="big-btn btn-ok" id="okBtn">✓ Зөв!<small>+1 · Space</small></button>
+    </div>
+  </section>`;
+
+  $("#okBtn").onclick = e => act("ok", e);
+  $("#skipBtn").onclick = e => act("skip", e);
+  $("#badBtn").onclick = e => act("bad", e);
+  $("#resumeBtn").onclick = togglePause;
+  $("#quitBtn").onclick = () => endTurn(true);
+  $("#pauseBtn").hidden = false; $("#pauseBtn").textContent = "⏸";
+
+  showCard();
+  tick();
+  turn.timer = setInterval(tick, 100);
+}
+
+function currentCard() {
+  if (game.pos >= game.deck.length) { game.deck = buildDeck(); game.pos = 0; }
+  return game.deck[game.pos];
+}
+
+function showCard() {
+  const c = currentCard();
+  $("#word").textContent = c.w;
+  $("#cat").textContent = c.c;
+  $("#corner").textContent = (game.pos + 1) + " / " + game.deck.length;
+  $("#taboos").innerHTML = c.t.map(x => `<span class="taboo">${esc(x)}</span>`).join("");
+  const body = $("#cardBody");
+  body.classList.remove("card-in"); void body.offsetWidth; body.classList.add("card-in");
+}
+
+function act(kind, ev) {
+  if (!turn || turn.paused || turn.done) return;
+  const c = currentCard();
+  turn[kind]++;
+  turn.log.push({ w: c.w, k: kind });
+  if (settings.mode === "teams") {
+    if (kind === "ok") game.scores[curTeam()]++;
+    if (kind === "bad") game.scores[curTeam()]--;
+  }
+  $("#cOk").textContent = turn.ok; $("#cSkip").textContent = turn.skip;
+  if ($("#cBad")) $("#cBad").textContent = turn.bad;
+
+  const stamp = $("#stamp");
+  const look = { ok: ["ЗӨВ!", "var(--mint)"], skip: ["АЛГАСАВ", "var(--amber)"], bad: ["ХЭЛЧИХЛЭЭ!", "var(--coral)"] }[kind];
+  stamp.textContent = look[0]; stamp.style.color = look[1];
+  stamp.classList.remove("show"); void stamp.offsetWidth; stamp.classList.add("show");
+  if (kind === "bad") { const card = $("#wordCard"); card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake"); }
+  if (kind !== "skip") floatText(kind === "ok" ? "+1" : "−1", kind === "ok" ? "var(--mint)" : "var(--coral)", ev);
+  sfx[kind]();
+  if (navigator.vibrate) try { navigator.vibrate(kind === "bad" ? [60, 40, 60] : 25); } catch (e) {}
+
+  game.pos++;
+  setTimeout(() => { if (turn && !turn.done) showCard(); }, 120);
+}
+
+function floatText(txt, color, ev) {
+  const el = document.createElement("div");
+  el.className = "float"; el.textContent = txt; el.style.color = color;
+  const r = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect) ? ev.currentTarget.getBoundingClientRect() : { left: innerWidth / 2, width: 0, top: innerHeight / 2 };
+  el.style.left = (r.left + r.width / 2) + "px"; el.style.top = (r.top - 10) + "px";
+  document.body.appendChild(el); setTimeout(() => el.remove(), 750);
+}
+
+function tick() {
+  if (!turn || turn.paused) return;
+  const ms = Math.max(0, turn.endAt - Date.now());
+  turn.remaining = ms;
+  const sec = Math.ceil(ms / 1000), pct = ms / (settings.time * 1000) * 100;
+  $("#barFill").style.width = pct + "%";
+  $("#timeNum").textContent = fmt(ms / 1000);
+  const danger = sec <= Math.min(10, Math.ceil(settings.time / 4)), warn = pct <= 50;
+  $("#bar").className = "bar" + (danger ? " danger" : warn ? " warn" : "");
+  $("#timeNum").classList.toggle("danger", danger);
+  if (sec <= 5 && sec > 0 && turn.lastTick !== sec) { turn.lastTick = sec; sfx.tick(); }
+  if (ms <= 0) endTurn();
+}
+
+function stopTimer() { if (turn && turn.timer) clearInterval(turn.timer); }
+
+function togglePause() {
+  if (!turn || turn.done) return;
+  turn.paused = !turn.paused;
+  if (turn.paused) { turn.remaining = Math.max(0, turn.endAt - Date.now()); }
+  else { turn.endAt = Date.now() + turn.remaining; }
+  $("#veil").hidden = !turn.paused;
+  $("#pauseBtn").textContent = turn.paused ? "▶" : "⏸";
+}
+
+/* =========================================================
+   4. ЭЭЛЖИЙН ҮР ДҮН
+========================================================= */
+function endTurn(early) {
+  if (!turn || turn.done) return;
+  turn.done = true; stopTimer(); $("#pauseBtn").hidden = true;
+  if (!early) sfx.end();
+  if (navigator.vibrate) try { navigator.vibrate([200, 80, 200]); } catch (e) {}
+  const teams = settings.mode === "teams";
+  const t = curTeam();
+  const pts = turn.ok - (settings.penalty ? turn.bad : 0);
+  game.turnPts.push(pts);
+  game.turn++;
+  const over = teams && game.turn >= game.totalTurns;
+  const review = turn.log.length
+    ? `<div class="review">${turn.log.map(l => `<span class="rv ${l.k}">${esc(l.w)}</span>`).join("")}</div>`
+    : `<p class="sub">Энэ ээлжид карт гараагүй.</p>`;
+
+  if (over) { renderFinal(review); return; }
+
+  main.innerHTML = `
+  <section class="screen">
+    <div class="panel center">
+      <div class="eyebrow">${early ? "Ээлж дууслаа" : "⏰ Цаг дууслаа!"}</div>
+      ${teams ? `<div class="sub" style="margin:6px 0 0;font-weight:900">${esc(teamName(t))}</div>` : ""}
+      <div class="ready-team" style="${tv(t)}">${pts > 0 ? "+" : ""}${pts} оноо</div>
+      <div class="score-board solo">
+        <div class="sb ok"><div class="n">${turn.ok}</div><div class="l">Зөв</div></div>
+        <div class="sb skip"><div class="n">${turn.skip}</div><div class="l">Алгассан</div></div>
+        <div class="sb bad"><div class="n">${settings.penalty ? turn.bad : "–"}</div><div class="l">Хориотой</div></div>
+      </div>
+      ${review}
+      ${teams ? `<div class="eyebrow">Нийт оноо</div>${scoreBoardHTML(true)}` : ""}
+      <div class="btn-row">
+        <button class="big-btn btn-plain" id="menuBtn">Тохиргоо</button>
+        <button class="big-btn btn-coral" id="nextBtn">${teams ? (settings.teamCount === 1 ? "Дараагийн ээлж →" : "Дараагийн баг →") : "Дахин тоглох 🔄"}</button>
+      </div>
+    </div>
+  </section>`;
+  $("#menuBtn").onclick = renderSetup;
+  $("#nextBtn").onclick = renderReady;
+}
+
+function renderFinalSingle(review) {
+  const total = game.scores[0], avg = Math.round(total / settings.rounds * 10) / 10;
+  const best = Math.max(...game.turnPts), msg = total >= settings.rounds * 8 ? "Гайхалтай!" : total >= settings.rounds * 4 ? "Сайн байна!" : "Дараа нь илүү сайн!";
+  if (settings.sound) { [523, 659, 784, 1047].forEach((f, i) => beep(f, .22, "triangle", .16, .6 + i * .12)); }
+  main.innerHTML = `
+  <section class="screen">
+    <div class="panel center">
+      <div class="trophy">⭐</div>
+      <div class="eyebrow">${esc(teamName(0))} · ${msg}</div>
+      <div class="ready-team" style="${tv(0)}">Нийт ${total} оноо</div>
+      <div class="score-board solo">
+        <div class="sb ok"><div class="n">${settings.rounds}</div><div class="l">Ээлж</div></div>
+        <div class="sb skip"><div class="n">${avg}</div><div class="l">Дундаж</div></div>
+        <div class="sb team" style="${tv(0)}"><div class="n">${best}</div><div class="l">Шилдэг ээлж</div></div>
+      </div>
+      <div class="eyebrow">Сүүлийн ээлжийн картууд</div>
+      ${review}
+      <div class="btn-row">
+        <button class="big-btn btn-plain" id="menuBtn">Тохиргоо</button>
+        <button class="big-btn btn-coral" id="againBtn">Рекордоо эвдэх 🔄</button>
+      </div>
+    </div>
+  </section>`;
+  $("#menuBtn").onclick = renderSetup;
+  $("#againBtn").onclick = newGame;
+}
+
+function renderFinal(review) {
+  if (game.scores.length === 1) return renderFinalSingle(review);
+  const L = leaders();
+  const title = !L.length ? "Бүгд тэнцлээ!"
+    : L.length === 1 ? esc(teamName(L[0])) + " яллаа!"
+    : L.map(i => esc(teamName(i))).join(", ") + " тэнцэж яллаа!";
+  if (settings.sound) { [523, 659, 784, 1047].forEach((f, i) => beep(f, .22, "triangle", .16, .6 + i * .12)); }
+  main.innerHTML = `
+  <section class="screen">
+    <div class="panel center">
+      <div class="trophy">${L.length === 1 ? "🏆" : "🤝"}</div>
+      <div class="eyebrow">Тоглоом дууслаа</div>
+      <div class="ready-team" style="${tv(L.length === 1 ? L[0] : 0)}">${title}</div>
+      ${scoreBoardHTML(true)}
+      <div class="eyebrow">Сүүлийн ээлжийн картууд</div>
+      ${review}
+      <div class="btn-row">
+        <button class="big-btn btn-plain" id="menuBtn">Тохиргоо</button>
+        <button class="big-btn btn-coral" id="againBtn">Дахин тоглох 🔄</button>
+      </div>
+    </div>
+  </section>`;
+  $("#menuBtn").onclick = renderSetup;
+  $("#againBtn").onclick = newGame;
+}
+
+/* =========================================================
+   ТОВЧЛУУР, ДЭЛГЭЦ, ДУУ
+========================================================= */
+document.addEventListener("keydown", e => {
+  if (!turn || turn.done) return;
+  if (e.target.tagName === "INPUT") return;
+  const k = e.code;
+  if (k === "KeyP" || k === "Escape") { e.preventDefault(); togglePause(); return; }
+  if (turn.paused) return;
+  if (k === "Space" || k === "ArrowRight" || k === "Enter") { e.preventDefault(); act("ok", { currentTarget: $("#okBtn") }); }
+  else if (k === "ArrowLeft") { e.preventDefault(); act("skip", { currentTarget: $("#skipBtn") }); }
+  else if ((k === "ArrowDown" || k === "KeyX") && settings.penalty) { e.preventDefault(); act("bad", { currentTarget: $("#badBtn") }); }
+});
+
+$("#pauseBtn").onclick = togglePause;
+
+const soundBtn = $("#soundBtn");
+const paintSound = () => { soundBtn.textContent = settings.sound ? "🔊" : "🔇"; };
+soundBtn.onclick = () => { settings.sound = !settings.sound; save(); paintSound(); if (settings.sound) beep(880, .08, "triangle"); };
+paintSound();
+
+$("#fullBtn").onclick = () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  } catch (e) {}
+};
+if (!document.fullscreenEnabled) $("#fullBtn").hidden = true;
+
+let wake = null;
+async function requestWake() {
+  try { if ("wakeLock" in navigator && !wake) { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => wake = null); } } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && turn && !turn.done && !turn.paused) togglePause();
+});
+
+renderSetup();
+</script>
+
+</body>
+</html>
